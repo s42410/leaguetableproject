@@ -1,53 +1,58 @@
-// קריאת נתונים מהשרת
-async function loadFromServer() {
-    let response = await fetch("http://localhost:3000/get-data");
-    return response.json();
-}
+document.addEventListener("DOMContentLoaded", function () {
+    const categories = document.querySelector(".categories");
+    const leaguesSection = document.getElementById("leagues");
+    const leagueOptions = document.getElementById("leagueOptions");
+    const tableBody = document.getElementById("tableBody");
 
-// שמירת נתונים לשרת
-async function saveToServer(data) {
-    await fetch("http://localhost:3000/save-data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-    });
-}
-
-// התחברות למנהלים
-const ADMIN_USER = "STEVE24";
-const ADMIN_PASS = "0584443017";
-
-function adminLogin() {
-    let username = document.getElementById("adminUsername").value;
-    let password = document.getElementById("adminPassword").value;
-
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-        alert("✅ התחברות מוצלחת!");
-        document.getElementById("loginPopup").classList.add("hidden");
-        document.getElementById("adminPanel").classList.remove("hidden");
-    } else {
-        alert("❌ שם משתמש או סיסמה שגויים!");
-    }
-}
-
-// שמירת טבלה לשרת
-async function saveTable() {
-    let selected = document.getElementById("tableSelect").value.split("-");
-    let sport = selected[0];
-    let league = selected[1];
-
-    let savedData = await loadFromServer();
-    savedData[sport] = savedData[sport] || {};
-    savedData[sport][league] = [];
-
-    document.querySelectorAll("#adminTableBody tr").forEach(row => {
-        let rowData = [];
-        row.querySelectorAll("td").forEach(cell => {
-            rowData.push(cell.textContent);
+    document.querySelectorAll(".sport-category").forEach(button => {
+        button.addEventListener("click", function () {
+            showLeagues(this.dataset.sport);
         });
-        savedData[sport][league].push(rowData);
     });
 
-    await saveToServer(savedData);
-    alert("💾 התוצאות נשמרו בהצלחה!");
-}
+    document.getElementById("backToCategories").addEventListener("click", function () {
+        leaguesSection.classList.add("hidden");
+        categories.classList.remove("hidden");
+    });
+
+    document.getElementById("loginButton").addEventListener("click", function () {
+        adminLogin();
+    });
+
+    function showLeagues(sport) {
+        leaguesSection.classList.remove("hidden");
+        categories.classList.add("hidden");
+        leagueOptions.innerHTML = "";
+
+        fetch(`/get-data?sport=${sport}`)
+            .then(response => response.json())
+            .then(data => {
+                Object.keys(data).forEach(league => {
+                    let btn = document.createElement("button");
+                    btn.textContent = `🏆 ${league}`;
+                    btn.addEventListener("click", () => showTable(sport, league, data[league]));
+                    leagueOptions.appendChild(btn);
+                });
+            });
+    }
+
+    function showTable(sport, league, teams) {
+        document.getElementById("leagueTable").classList.remove("hidden");
+        leaguesSection.classList.add("hidden");
+
+        document.getElementById("tableTitle").textContent = `${league}`;
+        tableBody.innerHTML = "";
+
+        teams.forEach(team => {
+            let row = `<tr>
+                <td>${team.name}</td>
+                <td>${team.games}</td>
+                <td>${team.wins}</td>
+                <td>${team.draws}</td>
+                <td>${team.losses}</td>
+                <td>${team.points}</td>
+            </tr>`;
+            tableBody.innerHTML += row;
+        });
+    }
+});
